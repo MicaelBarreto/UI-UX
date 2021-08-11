@@ -1,0 +1,166 @@
+  
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>Mapa de Movimento - Identificando movimento em uma área</title>
+</head>
+<body>
+<video id="video" autoplay width="1024" height="768"></video>
+
+<div id="container">
+  <canvas id="video-com-flip" width="1024" height="768"></canvas>
+  <canvas class='greenArea' id='greenArea'></canvas>
+  <canvas class='greenArea' id='greenArea'></canvas>
+</div>
+
+<canvas id="mapa-movimento" width="1024" height="768"></canvas>
+
+<style type="text/css">
+div#container{
+    position: fixed;
+    border: 2px;
+    top: 2;
+    z-index: 3;
+}
+canvas#video-com-flip{
+    position: fixed;
+    border: 2px;
+    top: 2;
+    z-index: 2;
+}
+canvas.greenArea{
+    width:100px;
+    height:100px;
+    position:absolute;
+    left:100px;
+    top:100px;
+    background:blue;
+    z-index: 4;
+}
+.block {
+  background-color: chartreuse;
+}
+
+.block-selected {
+  background-color: red;
+}
+
+video {
+    position: fixed;
+    border: 2px;
+    top: 2;
+    z-index: 1;
+}
+
+#mapa-movimento {
+    position: fixed;
+    border: 2px;
+    top: 2;
+    z-index: 1;
+}
+</style>
+<script>
+//alias document.querySelector();
+window.$ = (query, ctx = document) => ctx.querySelector(query);
+
+//o código que estará aqui dentro só será mostrado depois que página carregar
+document.addEventListener("DOMContentLoaded", function(){
+  
+//capturei o elemento de video
+const videoBase = $('#video');
+//não realizar captura de audio e apenas do video
+const constraints = { audio: false, video: true }; 
+  
+//responsável por solicitar a abertura da camera e capturar o stream de vídeo
+navigator.mediaDevices.getUserMedia(constraints)
+.then(function(stream) {
+  videoBase.srcObject = stream;
+  console.log(stream);
+  videoBase.onloadedmetadata = function(e) {
+    videoBase.play();
+  };//onloadedmetadata        
+})
+.catch(function(err) {
+  console.log(err.name + ": " + err.message);
+});
+
+//captura canvas
+const videoComFlip = $("#video-com-flip");
+//cria a base para edição do canvas com as imagens capturadas
+const contextoVideoComFlip = videoComFlip.getContext('2d');
+//flip horizontal para facilitar a usabilidade interação por gestos
+contextoVideoComFlip.translate(videoComFlip.width, 0);
+//contextoVideoComFlip.translate(150, 0);
+contextoVideoComFlip.scale(-1, 1);
+
+
+const mapaMovimento = $("#mapa-movimento");
+const mapaMovimentoContexto = mapaMovimento.getContext('2d');
+//mapaMovimentoContexto.scale(-1, 1);
+//mapaMovimentoContexto.translate(mapaMovimento.width, 0);
+
+
+var greenArea = document.getElementById('greenArea');
+var greenAreaContext = greenArea.getContext('2d');
+const widthgreenArea = greenArea.offsetWidth;
+const heightgreenArea = greenArea.offsetHeight;
+const greenAreaOffsetLeft = greenArea.offsetLeft;
+const greenAreaOffsetTop = greenArea.offsetTop;
+console.log(widthgreenArea,heightgreenArea, greenArea.offsetLeft, greenArea.offsetTop);
+var status = true;
+
+console.log(typeof imagemAnterior);
+
+const atualizacao =  setInterval(function(){  
+  
+  if (typeof imagemAnterior === 'undefined'){
+    var imagemAnterior = contextoVideoComFlip.getImageData(0, 0, videoComFlip.width, videoComFlip.height);
+  }
+
+  //ela pega o conteudo do video e joga no canvas invertido para melhorar a percepção do usuario
+  contextoVideoComFlip.drawImage(video, 0, 0, video.width, video.height);
+  
+  const imagemAtual = contextoVideoComFlip.getImageData(0, 0, videoComFlip.width, videoComFlip.height);  
+  
+  const mapa = mapaMovimentoContexto.getImageData(0, 0, videoComFlip.width, videoComFlip.height);
+
+  for (let i = 0; i< mapa.data.length; i+=4) {
+    media = Math.abs((imagemAtual.data[i]+imagemAtual.data[i+1]+imagemAtual.data[i+2])-(imagemAnterior.data[i]+imagemAnterior.data[i+1]+imagemAnterior.data[i+2]))/3;
+    media = media > 21 ? 255 : 0;
+    mapa.data[i] = media;
+    mapa.data[i+1] = media;
+    mapa.data[i+2] = media;
+    mapa.data[i+3] = 255;
+  }
+  
+  mapaMovimentoContexto.putImageData(mapa, 0, 0);
+
+  const block = mapaMovimentoContexto.getImageData(greenAreaOffsetLeft,greenAreaOffsetTop,widthgreenArea,heightgreenArea);
+  let quantidade = 0;
+
+  for (let i = 0; i< (block.data.length); i+=4) {
+    if(block.data[i] !== 0 || block.data[i+1] !== 0 || block.data[i+2] !== 0) {
+        quantidade++;
+    } 
+  }
+  
+  if((quantidade/(block.data.length/4) > 0.04) && status) {
+
+
+    document.getElementById("greenArea").style.backgroundColor = "green";
+    status = false;
+    setTimeout(function(){
+      document.getElementById("greenArea").style.backgroundColor = "blue";	
+      status = true;
+    },2000);
+  }
+
+  imagemAnterior = imagemAtual;
+},1000/40);
+
+});
+</script>
+</body>
+</html>

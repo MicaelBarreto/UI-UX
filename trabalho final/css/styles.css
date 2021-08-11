@@ -1,0 +1,52 @@
+.content {
+    width: 80%;
+    height: 100%;
+    align-items: center;
+    margin: 0 auto;
+}
+
+h1 {
+    text-align: center; 
+}
+
+.squares {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    margin-top: 10%;
+}
+
+.flex-squares {
+    display: flex;
+    margin: 1%;
+}
+
+#square {
+    width: 200px;
+    height: 200px;
+}
+
+#square.green {
+    background-color: green;
+    margin-right: 2%;
+}
+
+#square.yellow {
+    background-color: yellow;
+    margin-left: 2%;
+}
+
+#square.red {
+    background-color: red;
+    margin-right: 2%;
+}
+
+#square.blue {
+    background-color: blue;
+    margin-left: 2%;
+}
+
+#square.active {
+    transition: transform .2s;
+    transform: scale(1.1);
+}

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa de movimento</title>
+</head>
+<body>
+    <div class="content">
+        <video id="video" autoplay width="640" height="480"></video>
+        <div>
+            <video id="greyVideo" autoplay width="640" height="480"></video>
+            <canvas id="canvas"></canvas>
+            <canvas id="mapCanvas"></canvas>
+        </div>
+    </div>
+    <style>   
+        .content {
+            display: flex;
+        }     
+        #greyVideo, #canvas {
+            left: 0;
+            opacity: 0;
+            position: fixed;
+            top: 0;
+        }
+
+        #mapCanvas {
+            display: block;
+            margin: 0 auto;
+        }
+    </style>
+
+<script>
+    const constraints = { audio: false, video: true };
+
+    navigator.getUserMedia(constraints, success, () => console.error(error));
+    window.setInterval(snapshot, 40);
+
+    var alpha = 0.5;
+    var version = 0;
+    var greyScale = false;
+
+    var canvas = document.getElementById('canvas');
+    var mapCanvas = document.getElementById('mapCanvas');
+    var greyVideo = document.getElementById('greyVideo');
+    var context = canvas.getContext('2d');
+    var contextFinal = mapCanvas.getContext('2d');
+
+    var video = document.getElementById('video');
+
+    var localStream = null;
+    var currentImage = null;
+    var previousImage = [];
+
+    
+    function success(stream) {
+        localStream = stream;
+        
+        greyVideo.srcObject = stream
+        greyVideo.play();
+
+        video.srcObject = stream
+        video.play();
+    }
+
+
+    function snapshot() {
+        if (localStream) {
+            canvas.width = greyVideo.offsetWidth;
+            canvas.height = greyVideo.offsetHeight;
+            mapCanvas.width = greyVideo.offsetWidth;
+            mapCanvas.height = greyVideo.offsetHeight;
+
+            context.drawImage(greyVideo, 0, 0);
+            
+            previousImage[version] = context.getImageData(0, 0, canvas.width, canvas.height);
+            version = (version == 0) ? 1 : 0;
+
+            currentImage = context.getImageData(0, 0, canvas.width, canvas.height);
+
+            var length = currentImage.data.length;
+            var i = 0;
+            while (i < length) {
+                if (!greyScale) {
+                    currentImage.data[i] = alpha * (255 - currentImage.data[i]) + ((1-alpha) * previousImage[version].data[i]);
+                    currentImage.data[i + 1] = alpha * (255 - currentImage.data[i+1]) + ((1-alpha) * previousImage[version].data[i + 1]);
+                    currentImage.data[i + 2] = alpha * (255 - currentImage.data[i+2]) + ((1-alpha) * previousImage[version].data[i + 2]);
+                    currentImage.data[i + 3] = 255;
+                } else {
+                    var av = (currentImage.data[i] + currentImage.data[i + 1] + currentImage.data[i + 2]) / 3;
+                    var av2 = (previousImage[version].data[i] + previousImage[version].data[i + 1] + previousImage[version].data[i + 2]) / 3;
+                    var blended = alpha * (255 - av) + ((1-alpha) * av2);
+                    currentImage.data[i] = blended;
+                    currentImage.data[i + 1] = blended;
+                    currentImage.data[i + 2] = blended;
+                    currentImage.data[i + 3] = 255;
+                }
+
+                i += 4; 
+            }
+                contextFinal.putImageData(currentImage, 0, 0);
+        }
+    }
+</script>
+</body>
+</html>
